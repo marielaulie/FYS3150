@@ -46,6 +46,7 @@ int main(int argc, char* argv[])
 
                 }}}}}
         }
+
     finish = clock();
     double timeused = (double) (finish - start)/(CLOCKS_PER_SEC );
 cout <<  "Running program with N value = " << N << endl;
