@@ -12,12 +12,11 @@
 using namespace std;
 using namespace arma;
 
-
+double int_function(double x1, double y1, double z1, double x2, double y2, double z2);
 void gauss_laguerre(double *x, double *w, int n, double alf);
-double int_func(double r1, double r2, double theta1, double theta2, double phi1, double phi2);
+double new_func(double r1, double r2, double theta1, double theta2, double phi1, double phi2);
 double gammln( double xx);
-void Brute_MonteCarlo(int n, double a, double b, double  &integral, double  &std);
-
+void Brute_MonteCarlo(int n, double a, double b, double &integral, double &std);
 int main(int argc, char* argv[])
 {
 
@@ -30,7 +29,7 @@ int main(int argc, char* argv[])
     int N = atoi(argv[1]);
     double *x = new double [N];
     double *w = new double [N];
-    double a = -3.1;
+    double a = -atoi(argv[2]);
     double b = -a;
     double alf = 1.0;
     double *xgl1 = new double [N+1];
@@ -44,10 +43,6 @@ int main(int argc, char* argv[])
 
     double *r = new double [N];
     double *s = new double [N];
-    int n = 10000;
-    double integral;
-    double std;
-
 
 
     //   set up the mesh points and weights
@@ -56,43 +51,69 @@ int main(int argc, char* argv[])
     gauleg(0,2*pi, xgl3, wgl3, N);
 
 
-    double gammln( double xx);
+     double int_gauss = 0.;
+     double int_gausslag = 0.;
+     int n = 10000000;
+     //for ( int i = 1;  i <= N; i++){
+      //   int_gausslag += wgl[i];//*sin(xgl[i]);
+        // }
+      double gammln( double xx);
+      cout << "Running the program with n = " << n << "and N = " << N << endl;
+      cout << setprecision(3) << "The closed form answer is " <<  answer << endl;
 
-
-    double int_gauss = 0.;
-    clock_t start, finish;
-    start = clock();
-    for (int i=0;i<N;i++){
-       for (int j = 0;j<N;j++){
-       for (int k = 0;k<N;k++){
-       for (int l = 0;l<N;l++){
-       for (int m = 0;m<N;m++){
-       for (int n = 0;n<N;n++){
-            int_gauss+=wgl1[i]*wgl1[j]*wgl2[k]*wgl2[l]*wgl3[m]*wgl3[n]*int_func(xgl1[i],xgl1[j],xgl2[k],xgl2[l],xgl3[m],xgl3[n]);
-
-                }}}}}
-        }
-
-    double gammln( double xx);
-    Brute_MonteCarlo(n,a,b,integral, std);
-
-
-
-    finish = clock();
+      double integral;
+      double std;
+      clock_t start, finish;
+      start = clock();
+      Brute_MonteCarlo(n,a,b,integral, std);
+      finish = clock();
       double timeused = (double) (finish - start)/(CLOCKS_PER_SEC );
-cout <<  "Running program with N value = " << N << endl;
+
       cout << setiosflags(ios::showpoint | ios::uppercase);
-      cout << setprecision(10) << "Time used = " << timeused  << endl;
-
-
-cout << setprecision(3) << "The analytical solution with improved Gauss legandre quadrature is " << int_gauss << endl;
-cout << setprecision(3) << "The closed form answer is " <<  answer << endl;
-cout << "The answer using the Monte Carlo method looping over n equal to "<< n << ", is:" <<integral << endl;
+      cout << setprecision(10) << "Time used = " << timeused << " seconds." << endl;
 
 }
 
 
+void Brute_MonteCarlo(int n, double a, double b, double  &integral, double  &std){
 
+        random_device rd;
+        mt19937_64 gen(rd());
+        uniform_real_distribution<double> RandomNumberGenerator(0.0,1.0);
+
+        double * x = new double [n];
+        double x1, x2, y1, y2, z1, z2, f;
+        double mc = 0.0;
+        double sigma = 0.0;
+        int i;
+        double jacob = pow((b-a),6);
+
+        #pragma omp parallel for reduction(+:mc)  private (i, x1, x2, y1, y2, z1, z2, f)
+        for (i = 0; i < n; i++){
+                x1=RandomNumberGenerator(gen)*(b-a)+a;
+                x2=RandomNumberGenerator(gen)*(b-a)+a;
+                y1=RandomNumberGenerator(gen)*(b-a)+a;
+                y2=RandomNumberGenerator(gen)*(b-a)+a;
+                z1=RandomNumberGenerator(gen)*(b-a)+a;
+                z2=RandomNumberGenerator(gen)*(b-a)+a;
+                f=int_function(x1, x2, y1, y2, z1, z2);
+                mc += f;
+                x[i] = f;
+        }
+        mc = mc/((double) n );
+        #pragma omp parallel for reduction(+:sigma)  private (i)
+        for (i = 0; i < n; i++){
+                sigma += (x[i] - mc)*(x[i] - mc);
+        }
+        sigma = sigma*jacob/((double) n );
+        std = sqrt(sigma)/sqrt(n);
+        integral = mc*jacob;
+        delete [] x;
+        cout << setprecision(3) << "The analytical solution is " << integral << endl;
+        cout << "The standard deviation is " << std << endl;
+
+
+}
 double gammln( double xx)
 {
     double x,y,tmp,ser;
@@ -144,10 +165,27 @@ void gauss_laguerre(double *x, double *w, int n, double alf)
     }
 }
 
+double int_function(double x1, double y1, double z1, double x2, double y2, double z2){
+    //  this function defines the function to integrate
+    double alpha = 2.;
+    // evaluate the different terms of the exponential
+    double exp1=-2*alpha*sqrt(x1*x1+y1*y1+z1*z1);
+    double exp2=-2*alpha*sqrt(x2*x2+y2*y2+z2*z2);
+    double deno=sqrt(pow((x1-x2),2)+pow((y1-y2),2)+pow((z1-z2),2));
+    if (deno < 1e-4){
+        return 0;
+    }
+    else{
+        return exp(exp1+exp2)/deno;
+    }
 
 
+} // end of function to evaluate
 
-double int_func(double r1, double r2, double theta1, double theta2, double phi1, double phi2){
+// end function gaulag
+
+
+double new_func(double r1, double r2, double theta1, double theta2, double phi1, double phi2){
     double cosb = cos(theta1)*cos(theta2) + sin(theta1)*sin(theta2)*cos(phi1-phi2);
     double deno = r1*r1 + r2*r2 -2*r1*r2*cosb;
 
@@ -157,13 +195,6 @@ double int_func(double r1, double r2, double theta1, double theta2, double phi1,
     else{
         return (r1*r2*sin(theta1)*sin(theta2))/(1024.0*sqrt(double(deno)));
     }
-
-
-
-
-
-
-
 }
 
 void gauleg(double x1, double x2, double x[], double w[], int n)
@@ -228,41 +259,5 @@ void gauleg(double x1, double x2, double x[], double w[], int n)
    }
 } // End_ function gauleg()
 
-void Brute_MonteCarlo(int n, double a, double b, double  &integral, double  &std){
 
-        random_device rd;
-        mt19937_64 gen(rd());
-        uniform_real_distribution<double> RandomNumberGenerator(0.0,1.0);
-
-        double * x = new double [n];
-        double x1, x2, y1, y2, z1, z2, f;
-        double mc = 0.0;
-        double sigma = 0.0;
-        int i;
-        double jacob = pow((b-a),6);
-
-        #pragma omp parallel for reduction(+:mc)  private (i, x1, x2, y1, y2, z1, z2, f)
-        for (i = 0; i < n; i++){
-                x1=RandomNumberGenerator(gen)*(b-a)+a;
-                x2=RandomNumberGenerator(gen)*(b-a)+a;
-                y1=RandomNumberGenerator(gen)*(b-a)+a;
-                y2=RandomNumberGenerator(gen)*(b-a)+a;
-                z1=RandomNumberGenerator(gen)*(b-a)+a;
-                z2=RandomNumberGenerator(gen)*(b-a)+a;
-                f=int_func(x1, x2, y1, y2, z1, z2);
-                mc += f;
-                x[i] = f;
-        }
-        mc = mc/((double) n );
-        #pragma omp parallel for reduction(+:sigma)  private (i)
-        for (i = 0; i < n; i++){
-                sigma += (x[i] - mc)*(x[i] - mc);
-        }
-        sigma = sigma*jacob/((double) n );
-        std = sqrt(sigma)/sqrt(n);
-        integral = mc*jacob;
-        delete [] x;
-
-
-}
 
