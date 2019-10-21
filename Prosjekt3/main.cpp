@@ -8,6 +8,7 @@
 #include "time.h"
 #include "lib.h"
 #include <random>
+#include "mpi.h"
 
 using namespace std;
 using namespace arma;
@@ -17,7 +18,7 @@ void gauss_laguerre(double *x, double *w, int n, double alf);
 double new_func(double r1, double r2, double theta1, double theta2, double phi1, double phi2);
 double gammln( double xx);
 void Brute_MonteCarlo(int n, double a, double b, double &integral, double &std);
-int main(int argc, char* argv[])
+int main(int nargs, char* args[])
 {
 
     //Definerer Closed form løsning 5*Pi^2/16^2
@@ -26,10 +27,10 @@ int main(int argc, char* argv[])
     double nevner = 1/sixteen;
     double answer = 5*pi*pi*nevner;
     //Definerer alle variabler
-    int N = atoi(argv[1]);
+    int N = atoi(args[1]);
     double *x = new double [N];
     double *w = new double [N];
-    double a = -atoi(argv[2]);
+    double a = -atoi(args[2]);
     double b = -a;
     double alf = 1.0;
     double *xgl1 = new double [N+1];
@@ -52,8 +53,11 @@ int main(int argc, char* argv[])
 
 
      double int_gauss = 0.;
+     //int numprocs;
+     //int my_rank;
      double int_gausslag = 0.;
      int n = 10000000;
+
      //for ( int i = 1;  i <= N; i++){
       //   int_gausslag += wgl[i];//*sin(xgl[i]);
         // }
@@ -63,10 +67,14 @@ int main(int argc, char* argv[])
 
       double integral;
       double std;
+      //MPI_Init (&nargs, &args);
+      //MPI_Comm_size (MPI_COMM_WORLD, &numprocs);
+      //MPI_Comm_rank (MPI_COMM_WORLD, &my_rank);
       clock_t start, finish;
       start = clock();
       Brute_MonteCarlo(n,a,b,integral, std);
       finish = clock();
+      //MPI_Finalize ();
       double timeused = (double) (finish - start)/(CLOCKS_PER_SEC );
 
       cout << setiosflags(ios::showpoint | ios::uppercase);
@@ -77,9 +85,15 @@ int main(int argc, char* argv[])
 
 void Brute_MonteCarlo(int n, double a, double b, double  &integral, double  &std){
 
+        double pi = 3.14159265359;
         random_device rd;
         mt19937_64 gen(rd());
         uniform_real_distribution<double> RandomNumberGenerator(0.0,1.0);
+        uniform_real_distribution<double> RandomNumberGenerator_theta(0.0,pi);
+        uniform_real_distribution<double> RandomNumberGenerator_phi(0.0,2*pi);
+        double Y = RandomNumberGenerator(gen);
+        double X = -log(1-Y);
+        cout << Y << X << endl;
 
         double * x = new double [n];
         double x1, x2, y1, y2, z1, z2, f;
@@ -129,7 +143,6 @@ double gammln( double xx)
     for (j=0;j<=5;j++) ser += cof[j]/++y;
     return -tmp+log(2.5066282746310005*ser/x);
 }
-
 void gauss_laguerre(double *x, double *w, int n, double alf)
 {
     int i,its,j;
@@ -188,6 +201,7 @@ double int_function(double x1, double y1, double z1, double x2, double y2, doubl
 double new_func(double r1, double r2, double theta1, double theta2, double phi1, double phi2){
     double cosb = cos(theta1)*cos(theta2) + sin(theta1)*sin(theta2)*cos(phi1-phi2);
     double deno = r1*r1 + r2*r2 -2*r1*r2*cosb;
+    double exp3 = exp(-3*(r1 + r2));
 
     if(deno < 1E-8){
         return 0;
