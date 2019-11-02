@@ -122,7 +122,7 @@ void Metropolis(int L, int n, mat &n_matrix, double betaT, double &E, double &M,
 
     std::random_device rd;
     std::mt19937_64 gen(rd());
-    std::uniform_real_distribution<double> distribution(-1.0,1.0);
+    std::uniform_real_distribution<double> distribution(0.0,1.0);
     arma::vec E_vector = zeros<mat>(17);
     double equilibrium = 5000;
 
