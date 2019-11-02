@@ -10,7 +10,7 @@ INCLUDEPATH += /usr/local/include
 LIBS += -L/usr/local/lib
 LIBS += -larmadillo -llapack -lblas
 
-QMAKE_CXX = mpicxx
+QMAKE_CXX = /usr/local/bin/mpicxx
 QMAKE_CXX_RELEASE = $$QMAKE_CXX
 QMAKE_CXX_DEBUG = $$QMAKE_CXX
 QMAKE_LINK = $$QMAKE_CXX
