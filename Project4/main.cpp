@@ -16,7 +16,7 @@ ofstream ofile;
 
 arma::mat make_spinn_matrix(int L);
 void initialize_nm_E_M(int L, mat &n_matrix, double &E, double &M);
-void Metropolis(int L, int n, mat &n_matrix, double betaT, double &E, double &M,int &acceptance,  vec &ExpectationValue);
+void Metropolis(int L, int n, mat &n_matrix, double betaT, double T, double &E, double &M, vec &ExpectationValue);
 void mean(vec &ExpectationValue, int n, int L, double T);
 
 // inline function for periodic boundary conditions
@@ -27,17 +27,17 @@ inline int periodic(int i, int limit, int add) {
 int main(int argc, char* argv[])
 {
     string filename;
-    double T = atof(argv[3]);
-    double tempstep = 0.5;
-    double initialtemp = 1.0;
-    double finaltemp = 3.0;
+    double t = atof(argv[3]);
+    double tempstep = 0.01;
+    double initialtemp = 2.0;
+    double finaltemp = 2.3;
     int L = atoi(argv[1]); //number of spins
     int n = atoi(argv[2]); //Monte Carlo cycles
     filename=argv[4];
     double M = 0;
     double E = 0;
     double J = 1;
-    double betaT = 1.0/T;
+
     double pi = 3.1415926535;
 
     string fileout = filename;
@@ -47,20 +47,33 @@ int main(int argc, char* argv[])
     vec ExpectationValue = zeros<mat>(5);
     arma::mat n_matrix = make_spinn_matrix(L);
 
-    int acc = 0; //Checking how many flips are accepted
-
+     //Checking how many flips are accepted
+    clock_t start, finish;
+    start = clock();
     int numprocs, my_rank;    
     MPI_Init (&argc, &argv);
     MPI_Comm_size (MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank (MPI_COMM_WORLD, &my_rank);
 
+
         initialize_nm_E_M(L, n_matrix, E, M);
-        Metropolis(L, n, n_matrix, betaT, E, M,acc, ExpectationValue);
+        for (double T = initialtemp; T<= finaltemp; T += tempstep){
+            double betaT = 1.0/T;
+            cout << "T= " << T << endl;
+        Metropolis(L, n, n_matrix, betaT, T, E, M,ExpectationValue);
         mean(ExpectationValue, n, L, T);
-
-        std::cout << "Acceptance: " << acc / (double)n /L/L << std::endl;
-
+}
     MPI_Finalize ();
+    finish = clock();
+    double timeused = (double) (finish - start)/(CLOCKS_PER_SEC );
+
+    cout << setiosflags(ios::showpoint | ios::uppercase);
+    cout << setprecision(10) << "Time used = " << timeused << " seconds." << endl;
+
+
+
+
+
 
 
 
@@ -90,12 +103,12 @@ void initialize_nm_E_M(int L, mat &n_matrix, double &E, double &M){
 
     for(int i=0; i < L; i++) {
     for (int j=0; j < L; j++) {
-        n_matrix(i,j) = 1.0;
+        n_matrix(i,j) = 1.0;//(distribution(gen));
         M +=  (double) n_matrix(i,j);
         //Initializing the spinn matrix with random configuration spins
-       // if (n_matrix(i,j) == 0){
-         //   n_matrix(i,j) += -1;
-       // }
+        if (n_matrix(i,j) == 0){
+            n_matrix(i,j) += -1;
+        }
 
     }
     }
@@ -112,11 +125,12 @@ void initialize_nm_E_M(int L, mat &n_matrix, double &E, double &M){
 
     }
     }
+    //cout << n_matrix << endl;
 
 }
 
 
-void Metropolis(int L, int n, mat &n_matrix, double betaT, double &E, double &M, int &acceptance, vec &ExpectationValue)
+void Metropolis(int L, int n, mat &n_matrix, double betaT, double T, double &E, double &M, vec &ExpectationValue)
 {
     //Using the metropolis algorithm to flip spins if the energy is favorable enough
 
@@ -124,12 +138,13 @@ void Metropolis(int L, int n, mat &n_matrix, double betaT, double &E, double &M,
     std::mt19937_64 gen(rd());
     std::uniform_real_distribution<double> distribution(0.0,1.0);
     arma::vec E_vector = zeros<mat>(17);
-    double equilibrium = 5000;
+    double acc = 0;
+    int equilibrium = 1000;
+
 
 
     //Defining the energy vector
     for( int de =-8; de <= 8; de+=4) E_vector(de+8) = exp(-de*betaT) ;
-    //for( int de =-8; de <= 8; de++) std::cout << E_vector(de+8) << " " << de << std::endl;
 
 
     //Monte Carlo cycles for the Metropolis algorithm
@@ -159,26 +174,38 @@ void Metropolis(int L, int n, mat &n_matrix, double betaT, double &E, double &M,
             // update energy and magnetization
              M += (double) 2*n_matrix(x,y);
              E += (double) deltaE;
-             acceptance += 1;
+             acc += 1;
 
       }
    }
 }
 
-    //Summing up the values and writing to file
 
-        ofile << setiosflags(ios::showpoint | ios::uppercase);
-        ofile << setw(15) << setprecision(8) << c;
-        ofile << setw(15) << setprecision(8) << E/L/L << endl;
+    //Summing up the values and writing to file
         ExpectationValue(0)+=E;
         ExpectationValue(1)+=E*E;
         ExpectationValue(2)+=M;
         ExpectationValue(3)+=M*M;
         ExpectationValue(4)+=fabs(M);
+        double meanE = ExpectationValue(0)/c/L/L;
+
+       //if (c >= equilibrium){
+            //ofile << setiosflags(ios::showpoint | ios::uppercase);
+           // ofile << setw(15) << setprecision(8) << c;
+           // ofile << setw(15) << setprecision(8) << E/L/L << endl;
+
+       // }
+
+
+
+
+
 
 }
     double norm = 1.0/(n);
     ExpectationValue*=norm;
+    //std::cout << "Acceptance: " << acc/n/L/L  << std::endl;
+
 
 } // end of Metropolis sampling over spins
 
@@ -191,6 +218,7 @@ void mean(vec &ExpectationValue, int n, int L, double T){
     // all expectation values are per spin, divide by 1/NSpins/NSpins
     double E_var = (E2_norm - E_norm*E_norm)/L/L;
     double M_var = (M2_norm - M_abs_norm*M_abs_norm)/L/L;
+    double M2_var = (M2_norm - M_norm*M_norm);
     double kb = 1.;
     double kbT = 1./(kb*T);
     double Cv = E_var*kbT;
@@ -201,12 +229,20 @@ void mean(vec &ExpectationValue, int n, int L, double T){
     cout << "Monte Carlo cycles = " << n << endl;
     cout << "Spinmatrix dimension = " << L << endl;
     cout << "Mean energy = " << E_norm/L/L << endl;
-    cout << "Mean magnetization = " << M_norm << endl;
-    cout << "Mean abs magn = " << M_abs_norm << endl;
-    cout << "Energy variance = " << E_var << endl;
-    cout << "Magnetization variance = " << M_var << endl;
-    cout << "The heat capasity of the system = " << Cv << endl;
+   // cout << "Mean magnetization = " << M_norm << endl;
+    cout << "Mean abs magn = " << M_abs_norm/L/L << endl;
+  //  cout << "Energy variance = " << E_var << endl;
+  //  cout << "Magnetization variance = " << M_var << endl;
+   cout << "The heat capasity of the system = " << Cv << endl;
     cout << "The susceptibility of the system = " << chi << endl;
+
+    ofile << setiosflags(ios::showpoint | ios::uppercase);
+    ofile << setw(15) << setprecision(8) << T;
+    ofile << setw(15) << setprecision(8) << E_norm/L/L;
+    ofile << setw(15) << setprecision(8) << M_abs_norm/L/L;
+    ofile << setw(15) << setprecision(8) << Cv;
+    ofile << setw(15) << setprecision(8) << chi<< endl;
+
 
 
 
