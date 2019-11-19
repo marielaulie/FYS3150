@@ -27,7 +27,7 @@ inline int periodic(int i, int limit, int add) {
 int main(int argc, char* argv[])
 {
     string filename;
-    double T = atof(argv[3]);
+    double t = atof(argv[3]);
     double tempstep = 0.05;
     double initialtemp = 2.0;
     double finaltemp = 2.3;
@@ -57,19 +57,18 @@ int main(int argc, char* argv[])
 
 
         initialize_nm_E_M(L, n_matrix, E, M);
-       // for (double T = 2.0; T<= 2.3; T += 0.01){
+        for (double T = 2.0; T<= 2.3; T += 0.01){
             double betaT = 1.0/T;
             cout << "T= " << T << endl;
         Metropolis(L, n, n_matrix, betaT, T, E, M,ExpectationValue);
         mean(ExpectationValue, n, L, T);
-//}
+}
     MPI_Finalize ();
     finish = clock();
     double timeused = (double) (finish - start)/(CLOCKS_PER_SEC );
 
     cout << setiosflags(ios::showpoint | ios::uppercase);
     cout << setprecision(10) << "Time used = " << timeused << " seconds." << endl;
-
 
 
     ofile.close();
@@ -99,9 +98,9 @@ void initialize_nm_E_M(int L, mat &n_matrix, double &E, double &M){
         n_matrix(i,j) = 1.0; //(distribution(gen));
         M +=  (double) n_matrix(i,j);
         //Initializing the spinn matrix with random configuration spins
-        if (n_matrix(i,j) == 0){
-            n_matrix(i,j) += -1;
-        }
+        //if (n_matrix(i,j) == 0){
+           // n_matrix(i,j) += -1;
+        //}
 
     }
     }
@@ -118,6 +117,8 @@ void initialize_nm_E_M(int L, mat &n_matrix, double &E, double &M){
 
     }
     }
+
+    //testing if the initial matrix is correct
     //cout << n_matrix << endl;
 
 }
@@ -142,11 +143,11 @@ void Metropolis(int L, int n, mat &n_matrix, double betaT, double T, double &E, 
 
     //Monte Carlo cycles for the Metropolis algorithm
     for (int c = 1; c <= n; c++){
-        // loop over all spins
+        // loop over all spins, L^2
         for(int i =0; i < L; i++) {
         for (int j= 0; j < L; j++){
 
-         // Find random position
+         // Find random position in the spin matrix
          int x = (int) (distribution(gen)*(double)L);
          int y = (int) (distribution(gen)*(double)L);
 
@@ -158,15 +159,15 @@ void Metropolis(int L, int n, mat &n_matrix, double betaT, double T, double &E, 
          n_matrix(periodic(x,L,-1),y) +
          n_matrix(x, periodic(y,L,1)) +
          n_matrix(periodic(x,L,1),y));
-        // Here we perform the Metropolis test
 
-
+        // the Metropolis test
 
          if ((distribution(gen)) <= E_vector(deltaE+8) ) {
-             n_matrix(x,y) *= -1.0;  // flip one spin and accept new spin config
-            // update energy and magnetization
+             n_matrix(x,y) *= -1.0;  // If accepted: flips spin
+            // adding this contribution in energy and magnetization to the already existing values
              M += (double) 2*n_matrix(x,y);
              E += (double) deltaE;
+             //counting how many accepted flips
              acc += 1;
 
       }
@@ -184,11 +185,13 @@ void Metropolis(int L, int n, mat &n_matrix, double betaT, double T, double &E, 
 
        //if (c >= equilibrium){
 
-       // }
 
 
 
-
+        //ofile << setiosflags(ios::showpoint | ios::uppercase);
+        //ofile << setw(15) << setprecision(8) << c;
+        //ofile << setw(15) << setprecision(8) << E/L/L;
+//}
 
 
 }
@@ -204,7 +207,7 @@ void mean(vec &ExpectationValue, int n, int L, double T){
     double M_norm = ExpectationValue(2);
     double M2_norm = ExpectationValue(3);
     double M_abs_norm = ExpectationValue(4);
-    // all expectation values are per spin, divide by 1/NSpins/NSpins
+    // all expectation values are per spin
     double E_var = (E2_norm - E_norm*E_norm)/L/L;
     double M_var = (M2_norm - M_abs_norm*M_abs_norm)/L/L;
     double M2_var = (M2_norm - M_norm*M_norm);
@@ -225,12 +228,12 @@ void mean(vec &ExpectationValue, int n, int L, double T){
   // cout << "The heat capasity of the system = " << Cv << endl;
    // cout << "The susceptibility of the system = " << chi << endl;
 
-    //ofile << setiosflags(ios::showpoint | ios::uppercase);
-    //ofile << setw(15) << setprecision(8) << T;
-    //ofile << setw(15) << setprecision(8) << E_norm/L/L;
-    //ofile << setw(15) << setprecision(8) << M_abs_norm/L/L;
-    //ofile << setw(15) << setprecision(8) << Cv;
-    //ofile << setw(15) << setprecision(8) << chi<< endl;
+    ofile << setiosflags(ios::showpoint | ios::uppercase);
+    ofile << setw(15) << setprecision(8) << T;
+    ofile << setw(15) << setprecision(8) << E_norm/L/L;
+    ofile << setw(15) << setprecision(8) << M_abs_norm/L/L;
+    ofile << setw(15) << setprecision(8) << Cv;
+    ofile << setw(15) << setprecision(8) << chi<< endl;
 
 
 
