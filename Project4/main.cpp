@@ -27,8 +27,8 @@ inline int periodic(int i, int limit, int add) {
 int main(int argc, char* argv[])
 {
     string filename;
-    double t = atof(argv[3]);
-    double tempstep = 0.01;
+    double T = atof(argv[3]);
+    double tempstep = 0.05;
     double initialtemp = 2.0;
     double finaltemp = 2.3;
     int L = atoi(argv[1]); //number of spins
@@ -57,12 +57,12 @@ int main(int argc, char* argv[])
 
 
         initialize_nm_E_M(L, n_matrix, E, M);
-        for (double T = initialtemp; T<= finaltemp; T += tempstep){
+       // for (double T = 2.0; T<= 2.3; T += 0.01){
             double betaT = 1.0/T;
             cout << "T= " << T << endl;
         Metropolis(L, n, n_matrix, betaT, T, E, M,ExpectationValue);
         mean(ExpectationValue, n, L, T);
-}
+//}
     MPI_Finalize ();
     finish = clock();
     double timeused = (double) (finish - start)/(CLOCKS_PER_SEC );
@@ -72,14 +72,7 @@ int main(int argc, char* argv[])
 
 
 
-
-
-
-
-
-
-
-    //ofile.close();
+    ofile.close();
     return 0;
 
 }
@@ -103,7 +96,7 @@ void initialize_nm_E_M(int L, mat &n_matrix, double &E, double &M){
 
     for(int i=0; i < L; i++) {
     for (int j=0; j < L; j++) {
-        n_matrix(i,j) = 1.0;//(distribution(gen));
+        n_matrix(i,j) = 1.0; //(distribution(gen));
         M +=  (double) n_matrix(i,j);
         //Initializing the spinn matrix with random configuration spins
         if (n_matrix(i,j) == 0){
@@ -139,7 +132,7 @@ void Metropolis(int L, int n, mat &n_matrix, double betaT, double T, double &E, 
     std::uniform_real_distribution<double> distribution(0.0,1.0);
     arma::vec E_vector = zeros<mat>(17);
     double acc = 0;
-    int equilibrium = 1000;
+    //int equilibrium = 10000;
 
 
 
@@ -190,9 +183,6 @@ void Metropolis(int L, int n, mat &n_matrix, double betaT, double T, double &E, 
         double meanE = ExpectationValue(0)/c/L/L;
 
        //if (c >= equilibrium){
-            //ofile << setiosflags(ios::showpoint | ios::uppercase);
-           // ofile << setw(15) << setprecision(8) << c;
-           // ofile << setw(15) << setprecision(8) << E/L/L << endl;
 
        // }
 
@@ -205,7 +195,6 @@ void Metropolis(int L, int n, mat &n_matrix, double betaT, double T, double &E, 
     double norm = 1.0/(n);
     ExpectationValue*=norm;
     //std::cout << "Acceptance: " << acc/n/L/L  << std::endl;
-
 
 } // end of Metropolis sampling over spins
 
@@ -226,22 +215,22 @@ void mean(vec &ExpectationValue, int n, int L, double T){
 
 
 
-    cout << "Monte Carlo cycles = " << n << endl;
-    cout << "Spinmatrix dimension = " << L << endl;
-    cout << "Mean energy = " << E_norm/L/L << endl;
+    //cout << "Monte Carlo cycles = " << n << endl;
+   // cout << "Spinmatrix dimension = " << L << endl;
+  //  cout << "Mean energy = " << E_norm/L/L << endl;
    // cout << "Mean magnetization = " << M_norm << endl;
-    cout << "Mean abs magn = " << M_abs_norm/L/L << endl;
-  //  cout << "Energy variance = " << E_var << endl;
+   // cout << "Mean abs magn = " << M_abs_norm/L/L << endl;
+    cout << "Energy variance = " << E_var << endl;
   //  cout << "Magnetization variance = " << M_var << endl;
-   cout << "The heat capasity of the system = " << Cv << endl;
-    cout << "The susceptibility of the system = " << chi << endl;
+  // cout << "The heat capasity of the system = " << Cv << endl;
+   // cout << "The susceptibility of the system = " << chi << endl;
 
-    ofile << setiosflags(ios::showpoint | ios::uppercase);
-    ofile << setw(15) << setprecision(8) << T;
-    ofile << setw(15) << setprecision(8) << E_norm/L/L;
-    ofile << setw(15) << setprecision(8) << M_abs_norm/L/L;
-    ofile << setw(15) << setprecision(8) << Cv;
-    ofile << setw(15) << setprecision(8) << chi<< endl;
+    //ofile << setiosflags(ios::showpoint | ios::uppercase);
+    //ofile << setw(15) << setprecision(8) << T;
+    //ofile << setw(15) << setprecision(8) << E_norm/L/L;
+    //ofile << setw(15) << setprecision(8) << M_abs_norm/L/L;
+    //ofile << setw(15) << setprecision(8) << Cv;
+    //ofile << setw(15) << setprecision(8) << chi<< endl;
 
 
 
