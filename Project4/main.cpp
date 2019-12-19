@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 {
     string filename;
     double t = atof(argv[3]);
-    double tempstep = 0.05;
+    double tempstep = 0.1;
     double initialtemp = 2.0;
     double finaltemp = 2.3;
     int L = atoi(argv[1]); //number of spins
@@ -57,12 +57,12 @@ int main(int argc, char* argv[])
 
 
         initialize_nm_E_M(L, n_matrix, E, M);
-        for (double T = 2.0; T<= 2.3; T += 0.01){
-            double betaT = 1.0/T;
-            cout << "T= " << T << endl;
-        Metropolis(L, n, n_matrix, betaT, T, E, M,ExpectationValue);
-        mean(ExpectationValue, n, L, T);
-}
+        //for (double T = 2.0; T<= 2.3; T += 0.01){
+            double betaT = 1.0/2.0;
+            cout << "T= " << 2.0 << endl;
+        Metropolis(L, n, n_matrix, betaT, 2.0, E, M,ExpectationValue);
+        mean(ExpectationValue, n, L, 2.0);
+//}
     MPI_Finalize ();
     finish = clock();
     double timeused = (double) (finish - start)/(CLOCKS_PER_SEC );
